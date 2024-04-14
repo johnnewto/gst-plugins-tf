@@ -9,6 +9,7 @@ Usage
 
 import os
 import logging
+import pdb
 import cv2
 import trafaret as t
 import tensorflow as tf
@@ -63,12 +64,15 @@ def _parse_device(device: str) -> str:
 def is_gpu(device: str) -> bool:
     return "gpu" in device.lower()
 
-
+# todo jn
+# def create_config(device: str = 'CPU', *,  jn
+#                   per_process_gpu_memory_fraction: float = 0.0,
+#                   log_device_placement: bool = False) -> tf.ConfigProto:
 def create_config(device: str = 'CPU', *,
                   per_process_gpu_memory_fraction: float = 0.0,
-                  log_device_placement: bool = False) -> tf.ConfigProto:
+                  log_device_placement: bool = False):
     """Creates tf.ConfigProto for specifi device"""
-    config = tf.ConfigProto(log_device_placement=log_device_placement)
+    config = tf.compat.v1.ConfigProto(log_device_placement=log_device_placement)
     if is_gpu(device):
         if per_process_gpu_memory_fraction > 0.0:
             config.gpu_options.per_process_gpu_memory_fraction = per_process_gpu_memory_fraction
@@ -80,17 +84,17 @@ def create_config(device: str = 'CPU', *,
     return config
 
 
-def parse_graph_def(model_path: str) -> tf.GraphDef:
+def parse_graph_def(model_path: str) -> tf.compat.v1.GraphDef:
     """Parse graph from file"""
     if not os.path.isfile(model_path):
         raise ValueError(f"Invalid filename {model_path}")
-    with tf.gfile.GFile(model_path, 'rb') as f:
-        graph_def = tf.GraphDef()
+    with tf.io.gfile.GFile(model_path, 'rb') as f:
+        graph_def = tf.compat.v1.GraphDef()
         graph_def.ParseFromString(f.read())
     return graph_def
 
 
-def import_graph(graph_def: tf.GraphDef, device: str, name: str = "") -> tf.Graph:
+def import_graph(graph_def: tf.compat.v1.GraphDef, device: str, name: str = "") -> tf.Graph:
     """Imports graph and places on specified device"""
     with tf.device(f"/device:{device}"):
         graph = tf.Graph()
@@ -212,8 +216,8 @@ class TfObjectDetectionModel(object):
         graph = import_graph(parse_graph_def(self.config['weights']), self.config['device'])
 
         self.log.debug("Model (%s) placed on %s", self.config['weights'], self.config['device'])
-
-        self._session = tf.Session(graph=graph, config=tf_config)
+        # pdb.set_trace()
+        self._session = tf.compat.v1.Session(graph=graph, config=tf_config)
 
         self._inputs = {alias: graph.get_tensor_by_name(name) for alias, name in self.input_tensors.items()}
         self._outputs = {alias: graph.get_tensor_by_name(name) for alias, name in self.output_tensors.items()}
@@ -232,7 +236,7 @@ class TfObjectDetectionModel(object):
         try:
             self._session.close()
             self._session = None
-        except tf.OpError as err:
+        except tf.errors.OpError as err:
             self.log.error('%s close TF session error: %s. Skipping...', self, err)
 
         self.log.info("%s Destroyed successfully", self)
@@ -241,6 +245,7 @@ class TfObjectDetectionModel(object):
         return self.process_batch([image])[0]
 
     def process_batch(self, images: typ.List[np.ndarray]) -> typ.List[dict]:
+        # pdb.set_trace()
         preprocessed = np.stack([self._preprocess(image) for image in images])
 
         result = self._session.run(self._outputs, feed_dict={self._inputs['images']: preprocessed})
@@ -344,6 +349,7 @@ class GstTfDetectionPluginPy(GstBase.BaseTransform):
             # Explained: http://lifestyletransfer.com/how-to-add-metadata-to-gstreamer-buffer-in-python/
             gst_meta_write(buffer, objects)
         except Exception as err:
+            # pdb.set_trace()
             logging.error("Error %s: %s", self, err)
 
         return Gst.FlowReturn.OK
@@ -386,7 +392,7 @@ class GstTfDetectionPluginPy(GstBase.BaseTransform):
         if self.model:
             self.model.shutdown()
 
-        sGst.info(f"Destroyed {self}")
+        Gst.info(f"Destroyed {self}")
 
 
 # Required for registering plugin dynamically

@@ -1,4 +1,0 @@
-['remote "gcloud"']
-url = gs://lifestyletransfer/gst-plugins-tf
-[core]
-remote = gcloud

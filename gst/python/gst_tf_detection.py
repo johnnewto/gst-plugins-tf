@@ -255,7 +255,7 @@ class TfObjectDetectionModel(object):
         for image, scores, boxes, labels in zip(images, result['scores'], result['boxes'], result['labels']):
             detections = []
             for score, box, label in zip(scores, boxes, labels):
-
+                # pdb.set_trace()
                 class_name = self._labels.get(int(label))
                 if not class_name or score < self.config['threshold']:
                     continue

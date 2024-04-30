@@ -16,14 +16,14 @@ dvc pull
 ```
 
 ### Install Tensorflow
-- Tested on TF-GPU==1.5
+- Tested on TF-GPU==2.13 (CPU)
 #### TF-CPU
 ```bash
-pip install tensorflow==1.15
+pip install tensorflow~=2.13
 ```
 
 ```bash
-pip install tensorflow-gpu==1.15
+pip install tensorflow-gpu~=2.13
 ```
 
 ## Usage

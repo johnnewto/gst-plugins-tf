@@ -18,7 +18,7 @@ from gstreamer import Gst, GObject, GstBase
 from gstreamer import map_gst_buffer
 import gstreamer.utils as utils
 from gstreamer.gst_objects_info_meta import gst_meta_get
-import pdb
+
 
 def _get_log_level() -> int:
     return int(os.getenv("GST_PYTHON_LOG_LEVEL", logging.DEBUG / 10)) * 10
@@ -93,7 +93,7 @@ class ObjectsOverlayCairo:
                 # set color by class_name
                 r, g, b = self.colors.get(obj["class_name"])
                 context.set_source_rgb(r, g, b)
-                # pdb.set_trace()
+
                 # draw bounding box
                 l, t, w, h = obj['bounding_box']
                 context.rectangle(l, t, w, h)
@@ -112,9 +112,6 @@ class ObjectsOverlayCairo:
                 context.set_source_rgb(r, g, b)
                 context.move_to(l, t)
                 context.show_text(text)
-                # if text:
-                #     print(text)
-                #     # pdb.set_trace()
 
         except Exception as e:
             logging.error("Failed cairo render %s. %s", err, self)
@@ -158,6 +155,15 @@ class GstDetectionOverlay(GstBase.BaseTransform):
         super().__init__()
 
         self.model = ObjectsOverlayCairo()
+        self.width = None
+        self.height = None
+    
+    def set_width(self, width):
+        self.width = width
+
+    def set_height(self, height):
+        self.height = height
+
 
     def do_transform_ip(self, buffer: Gst.Buffer) -> Gst.FlowReturn:
 
@@ -167,14 +173,14 @@ class GstDetectionOverlay(GstBase.BaseTransform):
 
         try:
             objects = gst_meta_get(buffer)
-            # pdb.set_trace()
 
             if objects:
-                width, height = utils.get_buffer_size_from_gst_caps(self.sinkpad.get_current_caps())
+                if not self.width or not self.height:
+                    self.width, self.height = utils.get_buffer_size_from_gst_caps(self.sinkpad.get_current_caps())
 
                 # Do drawing
                 with map_gst_buffer(buffer, Gst.MapFlags.READ | Gst.MapFlags.WRITE) as mapped:
-                    self.model.draw(mapped, width, height, objects)
+                    self.model.draw(mapped, self.width, self.height, objects)
 
         except Exception as err:
             Gst.error(f"Error {self}: {err}")
